@@ -29,7 +29,7 @@ const openloginAdapter = new OpenloginAdapter();
 // web3auth.configureAdapter(openloginAdapter);
 
 export default function Page() {
-  const [selectedTab, setSelectedTab] = useState("pay");
+  const [selectedTab, setSelectedTab] = useState("home");
   const [provider, setProvider] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
 

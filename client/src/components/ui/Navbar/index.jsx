@@ -15,8 +15,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
-  console.log(loggedIn)
   const [state, setState] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This will set `isClient` to true only after the component mounts on the client side
+    setIsClient(true);
+  }, []);
 
   const navigation = [
     // { title: "Features", path: "#features" },
@@ -42,7 +47,7 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
   return (
     <header className="relative">
       <nav
-        className={`sticky top-0 z-50 h-full w-full  md:text-sm ${
+        className={`sticky top-0 z-50 h-full w-full md:text-sm ${
           state ? "fixed z-10 h-full" : ""
         }`}
       >
@@ -108,7 +113,7 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
             </div>
           </div>
           <AnimatePresence>
-            {(state || window.innerWidth > 768) && (
+            {(state || (isClient && window.innerWidth > 768)) && (
               <motion.div
                 className={`flex-1 pb-3 mt-8 md:pb-0 md:mt-0 md:block`}
                 initial="closed"
@@ -152,7 +157,6 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
     </header>
   );
 };
-
 export default Navbar;
 
 const DropdownComp = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {

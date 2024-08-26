@@ -1,113 +1,220 @@
-import Image from "next/image";
+"use client";
+import Navbar from "@/components/ui/Navbar";
+import Home from "@/modules/home";
+import { useEffect, useState } from "react";
+import { chainConfig } from "@/configs/chain";
+import { WALLET_ADAPTERS, WEB3AUTH_NETWORK } from "@web3auth/base";
+import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import { Web3AuthNoModal } from "@web3auth/no-modal";
+import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
+import RPC from "@/configs/ethersRPC";
+import Deposit from "@/modules/deposit";
+import { Button } from "@/components/ui/button";
+import Withdraw from "@/modules/withdraw";
+import Pay from "@/modules/pay";
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+const clientId = process.env.WEB3AUTHCLIENTID; // get from https://dashboard.web3auth.io
+
+const privateKeyProvider = new EthereumPrivateKeyProvider({
+  config: { chainConfig },
+});
+
+const web3auth = new Web3AuthNoModal({
+  clientId,
+  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+  privateKeyProvider,
+});
+
+const openloginAdapter = new OpenloginAdapter();
+// web3auth.configureAdapter(openloginAdapter);
+
+export default function Page() {
+  const [selectedTab, setSelectedTab] = useState("pay");
+  const [provider, setProvider] = useState(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  const getAccount = async (provider) => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const address = await RPC.getAccounts(provider);
+    uiConsole(address);
+    return address[0];
+  };
+
+  const getBalanceNo = async (provider) => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const balance = await RPC.getBalance(provider);
+    uiConsole(balance);
+    return balance;
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        if (!web3auth.isInitialized) {
+          web3auth.configureAdapter(openloginAdapter);
+          await web3auth.init();
+          setProvider(web3auth.provider);
+
+          if (web3auth.connected) {
+            setLoggedIn(true);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    init();
+  }, []);
+
+  // useEffect(() => {
+  //   setLoggedIn(web3auth.connected);
+  // }, [web3auth.connected]);
+
+  const login = async () => {
+    console.log("first");
+    const web3authProvider = await web3auth.connectTo(
+      WALLET_ADAPTERS.OPENLOGIN,
+      {
+        loginProvider: "google",
+      }
+    );
+    setProvider(web3authProvider);
+    if (web3auth.connected) {
+      setLoggedIn(true);
+    }
+  };
+
+  const getUserInfo = async () => {
+    // IMP START - Get User Information
+    const user = await web3auth.getUserInfo();
+    // IMP END - Get User Information
+    uiConsole(user);
+  };
+
+  const logout = async () => {
+    // IMP START - Logout
+    await web3auth.logout();
+    // IMP END - Logout
+    setProvider(null);
+    setLoggedIn(false);
+    uiConsole("logged out");
+  };
+
+  // IMP START - Blockchain Calls
+  // Check the RPC file for the implementation
+  const getAccounts = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const address = await RPC.getAccounts(provider);
+    uiConsole(address);
+  };
+
+  const getBalance = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const balance = await RPC.getBalance(provider);
+    uiConsole(balance);
+    return balance;
+  };
+
+  const signMessage = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const signedMessage = await RPC.signMessage(provider);
+    uiConsole(signedMessage);
+  };
+
+  const sendTransaction = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    uiConsole("Sending Transaction...");
+    const transactionReceipt = await RPC.sendTransaction(provider);
+    uiConsole(transactionReceipt);
+  };
+  // IMP END - Blockchain Calls
+
+  function uiConsole(...args) {
+    const el = document.querySelector("#console>p");
+    if (el) {
+      el.innerHTML = JSON.stringify(args || {}, null, 2);
+      console.log(...args);
+    }
+  }
+
+  console.log(loggedIn);
+
+  if (!loggedIn) {
+    return (
+      <div>
+        <div className="px-6 border-b">
+          <Navbar
+            setSelectedTab={setSelectedTab}
+            selectedTab={selectedTab}
+            logout={logout}
+            loggedIn={loggedIn}
+          />
         </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+        <Home
+          setSelectedTab={setSelectedTab}
+          loggedIn={loggedIn}
+          login={login}
         />
       </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+    );
+  }
+  return (
+    <div>
+      <div className="px-6 border-b">
+        <Navbar
+          setSelectedTab={setSelectedTab}
+          selectedTab={selectedTab}
+          logout={logout}
+          loggedIn={loggedIn}
+        />
       </div>
-    </main>
+      {selectedTab === "home" && (
+        <Home
+          setSelectedTab={setSelectedTab}
+          loggedIn={loggedIn}
+          login={login}
+        />
+      )}
+      {selectedTab === "deposit" && (
+        <Deposit
+          setSelectedTab={setSelectedTab}
+          loggedIn={loggedIn}
+          login={login}
+        />
+      )}
+      {selectedTab === "withdraw" && (
+        <Withdraw
+          setSelectedTab={setSelectedTab}
+          loggedIn={loggedIn}
+          login={login}
+        />
+      )}
+      {selectedTab === "pay" && (
+        <Pay
+          setSelectedTab={setSelectedTab}
+          loggedIn={loggedIn}
+          login={login}
+        />
+      )}
+    </div>
   );
 }

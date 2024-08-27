@@ -78,7 +78,6 @@ export default function Page() {
   // }, [web3auth.connected]);
 
   const login = async () => {
-    console.log("first");
     const web3authProvider = await web3auth.connectTo(
       WALLET_ADAPTERS.OPENLOGIN,
       {
@@ -181,6 +180,7 @@ export default function Page() {
     <div>
       <div className="px-6 border-b">
         <Navbar
+          provider={provider}
           setSelectedTab={setSelectedTab}
           selectedTab={selectedTab}
           logout={logout}
@@ -194,13 +194,7 @@ export default function Page() {
           login={login}
         />
       )}
-      {selectedTab === "deposit" && (
-        <Deposit
-          setSelectedTab={setSelectedTab}
-          loggedIn={loggedIn}
-          login={login}
-        />
-      )}
+      {selectedTab === "deposit" && <Deposit provider={provider} />}
       {selectedTab === "withdraw" && (
         <Withdraw
           setSelectedTab={setSelectedTab}

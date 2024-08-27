@@ -85,10 +85,20 @@ const signMessage = async (provider) => {
   }
 };
 
+async function getSigner(provider) {
+  try {
+    const provider = new ethers.providers.Web3Provider(this.provider);
+    return provider.getSigner();
+  } catch (error) {
+    return error;
+  }
+}
+
 export default {
   getChainId,
   getAccounts,
   getBalance,
   sendTransaction,
   signMessage,
+  getSigner,
 };

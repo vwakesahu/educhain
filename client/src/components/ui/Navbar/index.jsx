@@ -13,21 +13,79 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ChevronDown, Coins, CoinsIcon, Loader } from "lucide-react";
+import { Contract, ethers } from "ethers";
+import {
+  UsdcABI,
+  USDCContractAddress,
+} from "@/components/contracts/contractInfo";
 
-const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
+const Navbar = ({
+  setSelectedTab,
+  selectedTab,
+  logout,
+  loggedIn,
+  balanceUpdate,
+  provider,
+}) => {
   const [state, setState] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [address, setAddress] = useState("");
+  console.log(address)
+  const getAddress = async () => {
+    console.log(provider);
+    const ethersP = new ethers.providers.Web3Provider(provider);
+    const signer = await ethersP.getSigner();
+    const add = await signer.getAddress();
+    setAddress(add);
+  };
 
   useEffect(() => {
     // This will set `isClient` to true only after the component mounts on the client side
     setIsClient(true);
   }, []);
 
+    const [balance, setBalance] = useState("0");
+    const [balanceLoading, setBalanceLoading] = useState(true);
+
   const navigation = [
     // { title: "Features", path: "#features" },
     // { title: "Our toolkit", path: "#toolkit" },
     // { title: "Testimonials", path: "#testimonials" },
   ];
+
+  const checkBalance = async () => {
+    setBalanceLoading(true);
+    try {
+      if (!provider) {
+        throw new Error("Provider not initialized");
+      }
+      console.log(provider);
+      const ethersP = new ethers.providers.Web3Provider(provider);
+      const signer = await ethersP.getSigner();
+      const usdcContract = new Contract(USDCContractAddress, UsdcABI, signer);
+      const address = await signer.getAddress();
+      console.log(address);
+
+      const balanceT = await usdcContract.balanceOf(await signer.getAddress());
+      setBalance(balanceT.toString());
+      console.log("first", balanceT.toString());
+      // You might want to update some state or UI here to reflect the new balance
+    } catch (err) {
+      console.error("Error fetching tokens:", err);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (loggedIn) {
+        checkBalance();
+        getAddress();
+      }
+    };
+  }, [loggedIn]);
 
   const handleNavMenu = () => {
     setState(!state);
@@ -85,6 +143,7 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
+                        
                         <path
                           fillRule="evenodd"
                           d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -140,7 +199,21 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
                   <motion.li
                     variants={itemVariants}
                     transition={{ delay: navigation.length * 0.1 }}
+                    className="flex gap-6 items-center"
                   >
+                    {balanceLoading ? (
+                      <div className="text-xl font-semibold flex gap-2">
+                        <Loader className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="text-xl font-semibold flex gap-2">
+                        <p>{balance == "0" ? "0" : balance.slice(0, -18)}</p>
+                        <Coins className="w-6 h-6" />
+                      </div>
+                    )}
+
+                    <div>{address}</div>
+
                     <DropdownComp
                       setSelectedTab={setSelectedTab}
                       selectedTab={selectedTab}
@@ -160,14 +233,31 @@ const Navbar = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
 export default Navbar;
 
 const DropdownComp = ({ setSelectedTab, selectedTab, logout, loggedIn }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div>
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={setIsOpen}>
         <DropdownMenuTrigger
-          onClick={() => setSelectedTab("deposit")}
-          className="py-2.5 px-4 text-center capitalize rounded-lg duration-150 block font-medium text-sm text-white bg-gray-800 hover:bg-gray-600 active:bg-gray-900 md:inline"
+          onClick={() => {
+            setSelectedTab("deposit");
+            toggleDropdown();
+          }}
+          className="py-2.5 px-4 text-center capitalize rounded-lg duration-150 font-medium text-sm text-white bg-gray-800 hover:bg-gray-600 active:bg-gray-900 md:inline"
         >
-          {selectedTab === "home" ? "Home" : selectedTab + " Funds"}
+          <div className="flex items-center gap-3">
+            <p>{selectedTab === "home" ? "Home" : selectedTab + " Funds"}</p>
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChevronDown size={16} />
+            </motion.div>
+          </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="top-52">
           <DropdownMenuLabel>Options</DropdownMenuLabel>
